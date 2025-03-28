@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { title, description, topic, language } = await request.json();
+    const { title, description, topic, language, agentIds } = await request.json();
 
     const meeting = await prisma.meeting.create({
       data: {
@@ -11,6 +11,12 @@ export async function POST(request: Request) {
         description,
         topic,
         language: language || 'chinese',
+        agents: {
+          connect: agentIds.map((id: string) => ({ id })),
+        },
+      },
+      include: {
+        agents: true,
       },
     });
 

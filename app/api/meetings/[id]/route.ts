@@ -8,7 +8,7 @@ export async function GET(
   try {
     const meeting = await prisma.meeting.findUnique({
       where: {
-        id: params.id,
+        id: await params.id,
       },
       include: {
         agents: true,
@@ -40,7 +40,7 @@ export async function DELETE(
   try {
     const meeting = await prisma.meeting.delete({
       where: {
-        id: params.id,
+        id: await params.id,
       },
     });
 

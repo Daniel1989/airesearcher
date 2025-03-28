@@ -18,10 +18,12 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
+  
   try {
     const messages = await prisma.message.findMany({
       where: { 
-        meetingId: params.id 
+        meetingId: id 
       },
       orderBy: {
         createdAt: 'asc'
@@ -46,12 +48,14 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
+  
   try {
     const { agentId, conversationHistory } = await request.json();
 
     const [meeting, agent] = await Promise.all([
       prisma.meeting.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: { agents: true }
       }),
       prisma.agent.findUnique({
@@ -118,7 +122,7 @@ Keep your response focused and limit it to 2-3 paragraphs.`;
     // Store the message in the database
     const storedMessage = await prisma.message.create({
       data: {
-        meetingId: params.id,
+        meetingId: id,
         agentId: agent.id,
         agentName: agent.name,
         content: response,

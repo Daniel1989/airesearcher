@@ -5,10 +5,12 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
+  
   try {
     const meeting = await prisma.meeting.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         status: 'active',
@@ -17,6 +19,13 @@ export async function POST(
         agents: true,
       },
     });
+
+    if (!meeting) {
+      return NextResponse.json(
+        { error: 'Meeting not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(meeting);
   } catch (error) {
