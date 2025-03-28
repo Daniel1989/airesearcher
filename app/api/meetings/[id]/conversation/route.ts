@@ -14,12 +14,10 @@ const languageInstructions = {
 };
 
 // GET endpoint to retrieve stored conversation
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
-  
+
   try {
     const messages = await prisma.message.findMany({
       where: { 
@@ -44,12 +42,10 @@ export async function GET(
 }
 
 // POST endpoint to generate and store new message
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
-  
+
   try {
     const { agentId, conversationHistory } = await request.json();
 

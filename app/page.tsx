@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <main className="container py-8">
+    <main className="container py-8 mx-auto">
       <div className="flex flex-col items-center justify-center space-y-8 text-center">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
           Welcome to AI Researcher

@@ -1,14 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const meeting = await prisma.meeting.findUnique({
       where: {
-        id: await params.id,
+        id: params.id,
       },
       include: {
         agents: true,
@@ -33,14 +31,12 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const meeting = await prisma.meeting.delete({
       where: {
-        id: await params.id,
+        id: params.id,
       },
     });
 
