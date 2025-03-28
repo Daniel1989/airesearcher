@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { conductAgentResearch } from '@/app/lib/research';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -70,12 +71,29 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const traits = JSON.parse(agent.traits);
     const expertise = JSON.parse(agent.expertise);
 
-    const systemPrompt = `You are ${agent.name}, an AI agent with the following traits: ${traits.join(', ')}. 
+    let response: string;
+    const round = Math.floor(conversationHistory.length / meeting.agents.length) + 1;
+
+    if (round === 1 && conversationHistory.length === 0) {
+      // For first round, first agent: Conduct research and form opinion
+      const researchResult = await conductAgentResearch({
+        topic: meeting.topic,
+        agentName: agent.name,
+        traits,
+        expertise,
+        description: meeting.description || '',
+        language: meeting.language
+      });
+
+      response = researchResult.conclusion;
+    } else {
+      // For subsequent contributions, use the original conversation flow
+      const systemPrompt = `You are ${agent.name}, an AI agent with the following traits: ${traits.join(', ')}. 
 Your expertise includes: ${expertise.join(', ')}.
 Your role: ${agent.description}
 
 The topic of discussion is: ${meeting.topic}
-${meeting.description ? `Additional context: ${meeting.description}` : ''}
+${meeting.description || ''}
 
 ${languageInstructions[meeting.language as keyof typeof languageInstructions]}
 
@@ -83,37 +101,32 @@ Please provide your perspective on this topic in a concise, professional manner 
 Consider the previous discussion and respond appropriately to continue the conversation.
 Keep your response focused and limit it to 2-3 paragraphs.`;
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...conversationHistory.map((entry: { agentName: string; message: string }) => ({
-        role: "assistant",
-        content: `${entry.agentName}: ${entry.message}`,
-        name: entry.agentName.replace(/\s+/g, '_').toLowerCase()
-      })),
-      { 
-        role: "user", 
-        content: conversationHistory.length === 0 
-          ? meeting.language === "chinese" 
-            ? "请分享您对这个话题的初步想法。"
-            : meeting.language === "japanese"
-            ? "このトピックについての最初の考えを共有してください。"
-            : "Please share your initial thoughts on the topic."
-          : meeting.language === "chinese"
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory.map((entry: { agentName: string; message: string }) => ({
+          role: "assistant",
+          content: `${entry.agentName}: ${entry.message}`,
+          name: entry.agentName.replace(/\s+/g, '_').toLowerCase()
+        })),
+        { 
+          role: "user", 
+          content: meeting.language === "chinese"
             ? "请继续讨论，考虑其他人的观点。"
             : meeting.language === "japanese"
             ? "他の人の意見を考慮しながら、議論を続けてください。"
             : "Please continue the discussion, considering what others have said."
-      }
-    ];
+        }
+      ];
 
-    const completion = await openai.chat.completions.create({
-      model: "ep-20241223172831-lkrk2",
-      messages,
-      temperature: 0.7,
-      max_tokens: 500,
-    });
+      const completion = await openai.chat.completions.create({
+        model: "ep-20241223172831-lkrk2",
+        messages,
+        temperature: 0.7,
+        max_tokens: 500,
+      });
 
-    const response = completion.choices[0].message.content;
+      response = completion.choices[0].message.content || '';
+    }
 
     // Store the message in the database
     const storedMessage = await prisma.message.create({
@@ -122,7 +135,7 @@ Keep your response focused and limit it to 2-3 paragraphs.`;
         agentId: agent.id,
         agentName: agent.name,
         content: response,
-        round: Math.floor(conversationHistory.length / meeting.agents.length) + 1
+        round
       }
     });
 

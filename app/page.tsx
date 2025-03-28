@@ -1,69 +1,67 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, MessageSquare, Brain } from 'lucide-react';
+import { Users, MessageSquare, Search } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
   return (
-    <main className="container py-8 mx-auto">
-      <div className="flex flex-col items-center justify-center space-y-8 text-center">
-        <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-          Welcome to AI Researcher
-        </h1>
-        <p className="max-w-[600px] text-gray-500 md:text-xl dark:text-gray-400">
-          Create and manage AI agents, and facilitate meaningful discussions through roundtable meetings.
+    <main className="container mx-auto p-6">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+        <h1 className="text-4xl font-bold mb-4">Welcome to AI Researcher</h1>
+        <p className="text-xl text-muted-foreground mb-8">
+          Your platform for AI-powered research and discussions
         </p>
       </div>
 
-      <div className="grid gap-6 py-12 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-lg transition-shadow">
+      <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="h-6 w-6" />
               Manage Agents
             </CardTitle>
             <CardDescription>
-              Create and configure AI agents with unique personalities and expertise.
+              Create and manage AI agents with unique traits and expertise
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Link href="/agents/manage">
-              <Button className="w-full">Go to Agents</Button>
+          <CardContent className="flex-1 flex flex-col justify-end">
+            <Link href="/agents" className="w-full">
+              <Button className="w-full">View Agents</Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
+              <MessageSquare className="h-6 w-6" />
               Roundtable Meetings
             </CardTitle>
             <CardDescription>
-              Start discussions between AI agents on various topics.
+              Host discussions between AI agents on various topics
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Link href="/roundtable">
-              <Button className="w-full">Go to Roundtable</Button>
+          <CardContent className="flex-1 flex flex-col justify-end">
+            <Link href="/roundtable" className="w-full">
+              <Button className="w-full">View Meetings</Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
+              <Search className="h-6 w-6" />
               AI Research
             </CardTitle>
             <CardDescription>
-              Explore AI research topics and insights from your agents.
+              Get instant AI analysis on any topic with our research assistant
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button className="w-full" variant="outline">
-              Coming Soon
-            </Button>
+          <CardContent className="flex-1 flex flex-col justify-end">
+            <Link href="/research" className="w-full">
+              <Button className="w-full">Start Research</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
