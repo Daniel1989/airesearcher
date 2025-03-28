@@ -3,20 +3,14 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { title, topic, description, agentIds } = body;
+    const { title, description, topic, language } = await request.json();
 
     const meeting = await prisma.meeting.create({
       data: {
         title,
-        topic,
         description,
-        agents: {
-          connect: agentIds.map((id: string) => ({ id })),
-        },
-      },
-      include: {
-        agents: true,
+        topic,
+        language: language || 'chinese',
       },
     });
 
@@ -33,11 +27,17 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const meetings = await prisma.meeting.findMany({
-      include: {
-        agents: true,
-      },
       orderBy: {
         createdAt: 'desc',
+      },
+      include: {
+        agents: true,
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
       },
     });
 

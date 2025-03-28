@@ -14,26 +14,41 @@ datasource db {
 }
 
 model Agent {
-  id          String   @id @default(uuid())
+  id          String    @id @default(cuid())
   name        String
   description String
-  traits      String
-  expertise   String
+  traits      String    // JSON string array
+  expertise   String    // JSON string array
   tone        String   @default("professional")
   language    String   @default("English")
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  meetings    Meeting[] @relation("MeetingAgents")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  meetings    Meeting[]
+  messages    Message[]
 }
 
 model Meeting {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   title       String
-  topic       String
   description String?
+  topic       String
   status      String   @default("pending") // pending, active, completed
-  agents      Agent[]  @relation("MeetingAgents")
+  language    String   @default("chinese") // chinese, english, japanese
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  agents      Agent[]
+  messages    Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  round     Int
+  createdAt DateTime @default(now())
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId   String
+  agentName String
 }

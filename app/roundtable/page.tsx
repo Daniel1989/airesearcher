@@ -2,14 +2,21 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { NewMeetingDialog } from './components/new-meeting-dialog';
 import { Meeting } from '@/lib/types/meeting';
+import { History, MessageCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import NewMeetingDialog from './components/new-meeting-dialog';
+
+interface MeetingWithMessages extends Meeting {
+  messages: {
+    id: string;
+    round: number;
+  }[];
+}
 
 export default function RoundtablePage() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [meetings, setMeetings] = useState<MeetingWithMessages[]>([]);
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -37,7 +44,6 @@ export default function RoundtablePage() {
       });
       if (!response.ok) throw new Error('Failed to start meeting');
       
-      // Navigate to the meeting room
       router.push(`/roundtable/${meetingId}`);
     } catch (error) {
       console.error('Error starting meeting:', error);
@@ -46,6 +52,10 @@ export default function RoundtablePage() {
 
   const handleViewDetails = (meetingId: string) => {
     router.push(`/roundtable/${meetingId}/details`);
+  };
+
+  const handleViewHistory = (meetingId: string) => {
+    router.push(`/roundtable/${meetingId}`);
   };
 
   return (
@@ -66,51 +76,78 @@ export default function RoundtablePage() {
         </div>
       ) : (
         <div className="grid gap-6">
-          {meetings.map((meeting) => (
-            <Card key={meeting.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>{meeting.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">{meeting.description}</p>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="font-medium">Topic:</span>
-                    <span>{meeting.topic}</span>
-                    <span className="font-medium">Status:</span>
-                    <span className="capitalize">{meeting.status}</span>
-                    <span className="font-medium">Participants:</span>
-                    <span>{meeting.agents.length} agents</span>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewDetails(meeting.id)}
-                    >
-                      View Details
-                    </Button>
-                    {meeting.status === 'pending' && (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleStartMeeting(meeting.id)}
-                      >
-                        Start Meeting
-                      </Button>
+          {meetings.map((meeting) => {
+            const totalRounds = meeting.messages.length > 0 
+              ? Math.max(...meeting.messages.map(m => m.round))
+              : 0;
+            
+            return (
+              <Card key={meeting.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{meeting.title}</span>
+                    {meeting.messages.length > 0 && (
+                      <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
+                        <MessageCircle className="h-4 w-4" />
+                        {meeting.messages.length} messages • {totalRounds} rounds
+                      </span>
                     )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground">{meeting.description}</p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="font-medium">Topic:</span>
+                      <span>{meeting.topic}</span>
+                      <span className="font-medium">Status:</span>
+                      <span className="capitalize">{meeting.status}</span>
+                      <span className="font-medium">Participants:</span>
+                      <span>{meeting.agents?.length || 0} agents</span>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(meeting.id)}
+                      >
+                        View Details
+                      </Button>
+                      {meeting.messages.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewHistory(meeting.id)}
+                        >
+                          <History className="h-4 w-4 mr-2" />
+                          View History
+                        </Button>
+                      )}
+                      {meeting.status === 'pending' && (
+                        <Button 
+                          size="sm"
+                          onClick={() => handleStartMeeting(meeting.id)}
+                        >
+                          Start Meeting
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       <NewMeetingDialog
         open={isNewMeetingOpen}
         onOpenChange={setIsNewMeetingOpen}
-        onMeetingCreated={(meeting) => {
-          setMeetings((prev) => [meeting, ...prev]);
+        onMeetingCreated={(meeting: Meeting) => {
+          setMeetings((prev) => [{
+            ...meeting,
+            messages: []
+          } as MeetingWithMessages, ...prev]);
         }}
       />
     </main>

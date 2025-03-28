@@ -4,41 +4,19 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { useState, useEffect } from 'react';
-import { Agent } from '@/lib/types/agent';
 import { Meeting } from '@/lib/types/meeting';
-import { Checkbox } from '@/components/ui/checkbox';
-
-const formSchema = z.object({
-  title: z.string().min(2, 'Title must be at least 2 characters'),
-  topic: z.string().min(2, 'Topic must be at least 2 characters'),
-  description: z.string().optional(),
-  agentIds: z.array(z.string()).min(1, 'Select at least one agent'),
-});
+import { useState, useEffect } from 'react';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { LanguageSelector } from '@/app/components/language-selector';
+import { toast } from 'sonner';
 
 interface NewMeetingDialogProps {
   open: boolean;
@@ -46,24 +24,20 @@ interface NewMeetingDialogProps {
   onMeetingCreated: (meeting: Meeting) => void;
 }
 
-export function NewMeetingDialog({
+export default function NewMeetingDialog({
   open,
   onOpenChange,
   onMeetingCreated,
 }: NewMeetingDialogProps) {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [title, setTitle] = useState('');
+  const [topic, setTopic] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [language, setLanguage] = useState('chinese');
   const [isLoading, setIsLoading] = useState(false);
+  const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      topic: '',
-      description: '',
-      agentIds: [],
-    },
-  });
-
+  // Fetch available agents when dialog opens
   useEffect(() => {
     async function fetchAgents() {
       try {
@@ -73,12 +47,21 @@ export function NewMeetingDialog({
         setAgents(data);
       } catch (error) {
         console.error('Error fetching agents:', error);
+        toast.error('Failed to load available agents');
       }
     }
-    fetchAgents();
-  }, []);
+    if (open) {
+      fetchAgents();
+    }
+  }, [open]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !topic || selectedAgents.length === 0) {
+      toast.error('Please fill in all required fields and select at least one agent');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/meetings', {
@@ -86,138 +69,100 @@ export function NewMeetingDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          title,
+          topic,
+          description,
+          language,
+          agentIds: selectedAgents,
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to create meeting');
-      
       const meeting = await response.json();
+      
       onMeetingCreated(meeting);
       onOpenChange(false);
-      form.reset();
+      setTitle('');
+      setTopic('');
+      setDescription('');
+      setSelectedAgents([]);
+      setLanguage('chinese');
+      
+      toast.success('Meeting created successfully');
     } catch (error) {
       console.error('Error creating meeting:', error);
+      toast.error('Failed to create meeting');
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Meeting</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Meeting title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="topic"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Topic</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Discussion topic" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Meeting description"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="agentIds"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Select Agents</FormLabel>
-                  <div className="space-y-2">
-                    {agents.map((agent) => (
-                      <FormField
-                        key={agent.id}
-                        control={form.control}
-                        name="agentIds"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={agent.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(agent.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, agent.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== agent.id
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>{agent.name}</FormLabel>
-                                <p className="text-sm text-muted-foreground">
-                                  {agent.description}
-                                </p>
-                              </div>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Create Meeting'}
-              </Button>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create New Meeting</DialogTitle>
+            <DialogDescription>
+              Set up a new roundtable meeting with AI agents.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter meeting title"
+              />
             </div>
-          </form>
-        </Form>
+            <div className="grid gap-2">
+              <Label htmlFor="topic">Topic</Label>
+              <Input
+                id="topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Enter discussion topic"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter meeting description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Discussion Language</Label>
+              <LanguageSelector
+                value={language}
+                onValueChange={setLanguage}
+                className="w-full"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Select Agents</Label>
+              <MultiSelect
+                options={agents.map(agent => ({
+                  value: agent.id,
+                  label: agent.name,
+                }))}
+                value={selectedAgents}
+                onChange={setSelectedAgents}
+                placeholder="Select agents..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Meeting'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

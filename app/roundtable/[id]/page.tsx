@@ -3,10 +3,18 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Meeting } from '@/lib/types/meeting';
-import { ArrowLeft, Pause, Play, RotateCw, Square } from 'lucide-react';
+import { ArrowLeft, History, Pause, Play, RotateCw, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+interface StoredMessage {
+  id: string;
+  agentName: string;
+  content: string;
+  round: number;
+  createdAt: string;
+}
 
 export default function MeetingRoomPage() {
   const params = useParams();
@@ -17,6 +25,7 @@ export default function MeetingRoomPage() {
   const [conversation, setConversation] = useState<Array<{ agentName: string; message: string }>>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [round, setRound] = useState(1);
+  const [isRestoringConversation, setIsRestoringConversation] = useState(false);
 
   useEffect(() => {
     async function fetchMeeting() {
@@ -34,11 +43,40 @@ export default function MeetingRoomPage() {
     fetchMeeting();
   }, [params.id]);
 
+  useEffect(() => {
+    async function fetchStoredConversation() {
+      try {
+        setIsRestoringConversation(true);
+        const response = await fetch(`/api/meetings/${params.id}/conversation`);
+        if (!response.ok) throw new Error('Failed to fetch conversation');
+        const messages: StoredMessage[] = await response.json();
+        
+        if (messages.length > 0) {
+          const formattedConversation = messages.map(msg => ({
+            agentName: msg.agentName,
+            message: msg.content
+          }));
+          setConversation(formattedConversation);
+          setRound(Math.max(...messages.map(msg => msg.round)) + 1);
+        }
+      } catch (error) {
+        console.error('Error fetching conversation:', error);
+      } finally {
+        setIsRestoringConversation(false);
+      }
+    }
+    
+    if (meeting) {
+      fetchStoredConversation();
+    }
+  }, [params.id, meeting]);
+
   const handleStartConversation = () => {
     setCurrentAgentIndex(0);
     setIsPaused(false);
-    setConversation([]);
-    setRound(1);
+    if (conversation.length === 0) {
+      setRound(1);
+    }
   };
 
   const handlePauseResume = () => {
@@ -98,16 +136,20 @@ export default function MeetingRoomPage() {
     generateResponse();
   }, [currentAgentIndex, meeting, params.id, isPaused, isThinking, conversation]);
 
-  if (isLoading) {
-    return <div className="container py-8">Loading meeting...</div>;
+  if (isLoading || isRestoringConversation) {
+    return (
+      <div className="container py-8">
+        {isRestoringConversation ? 'Restoring conversation...' : 'Loading meeting...'}
+      </div>
+    );
   }
 
   if (!meeting) {
-    return <div className="container py-8">Meeting not found</div>;
+    return <div className="container py-8 mx-auto">Meeting not found</div>;
   }
 
   return (
-    <main className="container py-8">
+    <main className="container py-8 mx-auto">
       <div className="mb-8">
         <Link
           href="/roundtable"

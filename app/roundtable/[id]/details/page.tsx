@@ -59,7 +59,7 @@ export default function MeetingDetailsPage() {
   }
 
   return (
-    <main className="container py-8">
+    <main className="container py-8 mx-auto">
       <div className="mb-8">
         <Link
           href="/roundtable"
