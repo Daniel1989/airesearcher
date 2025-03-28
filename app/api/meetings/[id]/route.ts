@@ -1,0 +1,33 @@
+import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        id: params.id,
+      },
+      include: {
+        agents: true,
+      },
+    });
+
+    if (!meeting) {
+      return NextResponse.json(
+        { error: 'Meeting not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(meeting);
+  } catch (error) {
+    console.error('Error fetching meeting:', error);
+    return NextResponse.json(
+      { error: 'Error fetching meeting' },
+      { status: 500 }
+    );
+  }
+} 
