@@ -3,10 +3,21 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Meeting } from '@/lib/types/meeting';
-import { History, MessageCircle, Plus } from 'lucide-react';
+import { History, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import NewMeetingDialog from './components/new-meeting-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 
 interface MeetingWithMessages extends Meeting {
   messages: {
@@ -19,6 +30,7 @@ export default function RoundtablePage() {
   const [meetings, setMeetings] = useState<MeetingWithMessages[]>([]);
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingMeetingId, setDeletingMeetingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -56,6 +68,23 @@ export default function RoundtablePage() {
 
   const handleViewHistory = (meetingId: string) => {
     router.push(`/roundtable/${meetingId}`);
+  };
+
+  const handleDeleteMeeting = async (meetingId: string) => {
+    try {
+      const response = await fetch(`/api/meetings/${meetingId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete meeting');
+      
+      setMeetings((prev) => prev.filter((meeting) => meeting.id !== meetingId));
+      toast.success('Meeting deleted successfully');
+    } catch (error) {
+      console.error('Error deleting meeting:', error);
+      toast.error('Failed to delete meeting');
+    } finally {
+      setDeletingMeetingId(null);
+    }
   };
 
   return (
@@ -131,6 +160,14 @@ export default function RoundtablePage() {
                           Start Meeting
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto text-destructive hover:text-destructive"
+                        onClick={() => setDeletingMeetingId(meeting.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -150,6 +187,30 @@ export default function RoundtablePage() {
           } as MeetingWithMessages, ...prev]);
         }}
       />
+
+      <AlertDialog 
+        open={!!deletingMeetingId} 
+        onOpenChange={(open: boolean) => !open && setDeletingMeetingId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the meeting
+              and all its messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingMeetingId && handleDeleteMeeting(deletingMeetingId)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 } 

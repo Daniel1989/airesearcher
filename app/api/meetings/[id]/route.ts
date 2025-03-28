@@ -12,6 +12,7 @@ export async function GET(
       },
       include: {
         agents: true,
+        messages: true,
       },
     });
 
@@ -27,6 +28,27 @@ export async function GET(
     console.error('Error fetching meeting:', error);
     return NextResponse.json(
       { error: 'Error fetching meeting' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const meeting = await prisma.meeting.delete({
+      where: {
+        id: params.id,
+      },
+    });
+
+    return NextResponse.json(meeting);
+  } catch (error) {
+    console.error('Error deleting meeting:', error);
+    return NextResponse.json(
+      { error: 'Error deleting meeting' },
       { status: 500 }
     );
   }
