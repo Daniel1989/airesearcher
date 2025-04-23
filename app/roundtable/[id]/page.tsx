@@ -114,14 +114,14 @@ export default function MeetingRoomPage() {
           }),
         });
 
-        if (!response.ok) throw new Error('Failed to generate response');
-        const data = await response.json();
+        if (response.ok) {
+          const data = await response.json();
 
-        setConversation(prev => [...prev, {
-          agentName: currentAgent.name,
-          message: data.response,
-        }]);
-
+          setConversation(prev => [...prev, {
+            agentName: currentAgent.name,
+            message: data.response,
+          }]);
+        };
         // Move to next agent
         setCurrentAgentIndex(prevIndex => 
           prevIndex + 1 >= meeting.agents.length ? -1 : prevIndex + 1

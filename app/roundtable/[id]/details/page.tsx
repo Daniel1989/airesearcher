@@ -101,7 +101,7 @@ export default function MeetingDetailsPage() {
                             <p className="text-sm text-muted-foreground">
                               {agent.description}
                             </p>
-                            <div className="flex flex-wrap gap-2 mt-2">
+                            {/* <div className="flex flex-wrap gap-2 mt-2">
                               {JSON.parse(agent.traits as string).map(
                                 (trait: string) => (
                                   <span
@@ -112,7 +112,7 @@ export default function MeetingDetailsPage() {
                                   </span>
                                 )
                               )}
-                            </div>
+                            </div> */}
                           </div>
                         </div>
                       </CardContent>

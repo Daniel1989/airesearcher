@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'https://ark.cn-beijing.volces.com/api/v3'
+  baseURL: process.env.BASE_URL
 });
 
 const languageInstructions = {
@@ -28,10 +28,8 @@ ${languageInstructions[language as keyof typeof languageInstructions]}
 Keep the plan concise and focused on 2-3 main points.`;
 
   const completion = await openai.chat.completions.create({
-    model: "ep-20241223172831-lkrk2",
+    model: "gemini-2.0-flash",
     messages: [{ role: "user", content: planPrompt }],
-    temperature: 0.7,
-    max_tokens: 300,
   });
 
   return completion.choices[0].message.content || '';
@@ -50,10 +48,8 @@ ${languageInstructions[language as keyof typeof languageInstructions]}
 Keep your research summary focused and analytical.`;
 
   const completion = await openai.chat.completions.create({
-    model: "ep-20241223172831-lkrk2",
+    model: "gemini-2.0-flash",
     messages: [{ role: "user", content: researchPrompt }],
-    temperature: 0.7,
-    max_tokens: 400,
   });
 
   return completion.choices[0].message.content || '';
@@ -76,15 +72,16 @@ ${languageInstructions[language as keyof typeof languageInstructions]}
 
 Focus on providing insights that leverage your expertise and research findings.
 Keep your response professional and concise (2-3 paragraphs).`;
-
-  const completion = await openai.chat.completions.create({
-    model: "ep-20241223172831-lkrk2",
-    messages: [{ role: "system", content: conclusionPrompt }],
-    temperature: 0.7,
-    max_tokens: 500,
-  });
-
-  return completion.choices[0].message.content || '';
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gemini-2.0-flash",
+      messages: [{ role: "system", content: conclusionPrompt }],
+    });
+    return completion.choices[0].message.content || '';
+  } catch (error:any) {
+    console.error('Error in formConclusion:', error);
+    return '';
+  }
 }
 
 interface ResearchParams {

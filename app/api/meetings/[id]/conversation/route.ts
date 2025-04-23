@@ -5,7 +5,7 @@ import { conductAgentResearch } from '@/app/lib/research';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'https://ark.cn-beijing.volces.com/api/v3'
+  baseURL: process.env.BASE_URL
 });
 
 const languageInstructions = {
@@ -103,10 +103,10 @@ Keep your response focused and limit it to 2-3 paragraphs.`;
 
       const messages = [
         { role: "system", content: systemPrompt },
-        ...conversationHistory.map((entry: { agentName: string; message: string }) => ({
+        ...conversationHistory.filter((entry: { agentName: string; message: string }) => !!entry.message).map((entry: { agentName: string; message: string }) => ({
           role: "assistant",
-          content: `${entry.agentName}: ${entry.message}`,
-          name: entry.agentName.replace(/\s+/g, '_').toLowerCase()
+          content: `[${entry.agentName}] ${entry.message}`,
+          // name: entry.agentName.replace(/\s+/g, '_').toLowerCase()
         })),
         { 
           role: "user", 
@@ -117,15 +117,26 @@ Keep your response focused and limit it to 2-3 paragraphs.`;
             : "Please continue the discussion, considering what others have said."
         }
       ];
-
-      const completion = await openai.chat.completions.create({
-        model: "ep-20241223172831-lkrk2",
-        messages,
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      response = completion.choices[0].message.content || '';
+      try {
+        const completion = await fetch(`${process.env.BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "gemini-2.0-flash",
+            messages,
+          })
+        }).then(res => res.json());
+        response = completion.choices[0].message.content || '';
+      } catch (error:any) {
+        console.error('OpenAI API Error:', error);
+        return NextResponse.json(
+          { error: 'Error generating conversation' },
+          { status: 500 }
+        );
+      }
     }
 
     // Store the message in the database
