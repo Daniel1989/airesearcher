@@ -91,7 +91,7 @@ export default function MeetingRoomPage() {
   const handleNextRound = () => {
     if (currentAgentIndex === -1) {
       setCurrentAgentIndex(0);
-      setRound(prev => prev + 1);
+      // setRound(prev => prev + 1); // Removed this line
       setIsPaused(false);
     }
   };
@@ -123,9 +123,14 @@ export default function MeetingRoomPage() {
           }]);
         };
         // Move to next agent
-        setCurrentAgentIndex(prevIndex => 
-          prevIndex + 1 >= meeting.agents.length ? -1 : prevIndex + 1
-        );
+        setCurrentAgentIndex(prevIndex => {
+          const nextIndex = prevIndex + 1;
+          if (nextIndex >= meeting.agents.length) {
+            setRound(prevRound => prevRound + 1);
+            return -1; 
+          }
+          return nextIndex;
+        });
       } catch (error) {
         console.error('Error generating response:', error);
       } finally {
