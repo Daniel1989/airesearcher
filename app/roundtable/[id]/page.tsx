@@ -26,6 +26,9 @@ export default function MeetingRoomPage() {
   const [isThinking, setIsThinking] = useState(false);
   const [round, setRound] = useState(1);
   const [isRestoringConversation, setIsRestoringConversation] = useState(false);
+  const [isAutoModeActive, setIsAutoModeActive] = useState(false);
+  const [autoRoundsTarget, setAutoRoundsTarget] = useState(0);
+  const [roundsCompletedInAutoMode, setRoundsCompletedInAutoMode] = useState(0);
 
   useEffect(() => {
     async function fetchMeeting() {
@@ -86,6 +89,10 @@ export default function MeetingRoomPage() {
   const handleStop = () => {
     setCurrentAgentIndex(-1);
     setIsPaused(false);
+    // Deactivate auto mode
+    setIsAutoModeActive(false);
+    setAutoRoundsTarget(0);
+    setRoundsCompletedInAutoMode(0);
   };
 
   const handleNextRound = () => {
@@ -125,10 +132,30 @@ export default function MeetingRoomPage() {
         // Move to next agent
         setCurrentAgentIndex(prevIndex => {
           const nextIndex = prevIndex + 1;
-          if (nextIndex >= meeting.agents.length) {
-            setRound(prevRound => prevRound + 1);
-            return -1; 
+
+          if (nextIndex >= meeting.agents.length) { // Current round is ending
+            setRound(prevRound => prevRound + 1); // Always increment round
+
+            if (isAutoModeActive) {
+              const newRoundsCompletedInAutoMode = roundsCompletedInAutoMode + 1;
+              setRoundsCompletedInAutoMode(newRoundsCompletedInAutoMode);
+
+              if (newRoundsCompletedInAutoMode < autoRoundsTarget) {
+                // Auto mode continues: start next round
+                return 0; // Set currentAgentIndex to the first agent
+              } else {
+                // Auto mode ends: target met
+                setIsAutoModeActive(false);
+                setAutoRoundsTarget(0);
+                setRoundsCompletedInAutoMode(0); // Reset for clarity
+                return -1; // Stop turns
+              }
+            } else {
+              // Not in auto mode, normal round completion
+              return -1; // Stop turns
+            }
           }
+          // Round continues, move to next agent
           return nextIndex;
         });
       } catch (error) {
@@ -184,19 +211,37 @@ export default function MeetingRoomPage() {
 
           <div className="flex gap-3 pt-2">
             {currentAgentIndex === -1 ? (
-              <>
+              <div className="flex gap-3"> {/* Changed from <> to <div> for consistent grouping */}
                 {conversation.length === 0 ? (
                   <Button onClick={handleStartConversation} size="lg">
                     <Play className="h-4 w-4 mr-3" />
                     Start Conversation
                   </Button>
                 ) : (
-                  <Button onClick={handleNextRound} size="lg">
+                  <Button onClick={handleNextRound} size="lg" disabled={isAutoModeActive}>
                     <RotateCw className="h-4 w-4 mr-3" />
                     Start Round {round}
                   </Button>
                 )}
-              </>
+                {!isAutoModeActive && (
+                  <Button
+                    onClick={() => {
+                      setIsAutoModeActive(true);
+                      setAutoRoundsTarget(10);
+                      setRoundsCompletedInAutoMode(0);
+                      if (conversation.length === 0) {
+                        handleStartConversation();
+                      } else {
+                        handleNextRound();
+                      }
+                    }}
+                    size="lg"
+                    variant="outline"
+                  >
+                    Auto-Run 10 Rounds
+                  </Button>
+                )}
+              </div>
             ) : (
               <div className="flex gap-3">
                 <Button onClick={handlePauseResume} size="lg">
@@ -219,6 +264,11 @@ export default function MeetingRoomPage() {
               </div>
             )}
           </div>
+          {isAutoModeActive && (
+            <div className="text-sm text-blue-600 mt-4 pt-4 border-t"> {/* Added mt-4, pt-4 and border-t for separation */}
+              Auto-mode active. Completed {roundsCompletedInAutoMode} of {autoRoundsTarget} rounds. (Currently on round {round})
+            </div>
+          )}
         </CardContent>
       </Card>
 
