@@ -118,17 +118,10 @@ Keep your response focused and limit it to 2-3 paragraphs.`;
         }
       ];
       try {
-        const completion = await fetch(`${process.env.BASE_URL}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: "gemini-2.0-flash",
-            messages,
-          })
-        }).then(res => res.json());
+        const completion = await openai.chat.completions.create({
+          model: "gemini-2.5-flash-preview-04-17",
+          messages,
+        })
         response = completion.choices[0].message.content || '';
       } catch (error:any) {
         console.error('OpenAI API Error:', error);
