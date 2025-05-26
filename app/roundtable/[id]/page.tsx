@@ -2,10 +2,21 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Meeting } from '@/lib/types/meeting';
-import { ArrowLeft, History, Pause, Play, RotateCw, Square } from 'lucide-react';
+import { ArrowLeft, History, Pause, Play, RotateCw, Sparkles, Square } from 'lucide-react'; // Added Sparkles
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner'; // Added toast
 import { useEffect, useState } from 'react';
 
 interface StoredMessage {
@@ -29,6 +40,9 @@ export default function MeetingRoomPage() {
   const [isAutoModeActive, setIsAutoModeActive] = useState(false);
   const [autoRoundsTarget, setAutoRoundsTarget] = useState(0);
   const [roundsCompletedInAutoMode, setRoundsCompletedInAutoMode] = useState(0);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
 
   useEffect(() => {
     async function fetchMeeting() {
@@ -93,6 +107,36 @@ export default function MeetingRoomPage() {
     setIsAutoModeActive(false);
     setAutoRoundsTarget(0);
     setRoundsCompletedInAutoMode(0);
+  };
+
+  const handleGenerateSummary = async () => {
+    setIsSummarizing(true);
+    setSummary(null); // Clear previous summary
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000)); 
+
+      // Mocked API response (using meeting details to make it dynamic)
+      const completedRounds = round > 0 ? round -1 : 0; // Ensure non-negative rounds
+      const mockSummaryText = `This is a dynamic mock summary for the meeting titled "${meeting?.title || 'N/A'}" on the topic: "${meeting?.topic || 'N/A'}". The discussion involved ${meeting?.agents?.length || 'several'} agents and appears to have completed ${completedRounds} round(s). Based on the conversation, a key actionable item is to follow up on the main proposals discussed.`;
+      
+      setSummary(mockSummaryText);
+      setShowSummaryDialog(true); // Open the dialog
+      toast.success("Summary generated successfully!");
+
+    } catch (error) {
+      // It's good practice to check if the error is an instance of Error
+      if (error instanceof Error) {
+        console.error("Error generating summary:", error.message);
+        toast.error(`Failed to generate summary: ${error.message}`);
+      } else {
+        console.error("An unknown error occurred while generating summary:", error);
+        toast.error("Failed to generate summary due to an unknown error.");
+      }
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const handleNextRound = () => {
@@ -190,6 +234,26 @@ export default function MeetingRoomPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Exit Meeting
         </Link>
+      </div>
+
+      {/* Add the new button section here */}
+      <div className="mb-4 flex justify-start pt-4"> {/* Added pt-4 for some space from exit link */}
+        {conversation.length > 0 && (
+          <Button
+            onClick={handleGenerateSummary}
+            disabled={isSummarizing}
+            variant="outline" 
+          >
+            {isSummarizing ? (
+              "Summarizing..." 
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Get AI Summary
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <Card className="mb-8">
@@ -319,6 +383,29 @@ export default function MeetingRoomPage() {
           </Card>
         )}
       </div>
+
+      <Dialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog}>
+        <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[80vh] flex flex-col"> {/* Allow more width and manage height */}
+          <DialogHeader>
+            <DialogTitle>Conversation Summary</DialogTitle>
+            <DialogDescription>
+              AI-generated summary of the discussion, focusing on actionable items.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-grow pr-6 -mr-6"> {/* ScrollArea will take available space and needs padding adjustment for scrollbar */}
+            <div className="whitespace-pre-wrap py-4">
+              {summary || "No summary available."}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="sm:justify-start mt-auto pt-4"> {/* mt-auto pushes footer down, pt-4 for spacing */}
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
